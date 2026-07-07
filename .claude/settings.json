@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./iperf3.exe -c 192.168.11.134 -p 5202 -u -b 5M -t 3 --tos 136 -f m)",
+      "Bash(./iperf3.exe -c 192.168.11.134 -p 5203 -u -b 2M -t 3 --tos 104 -f m --forceflush)",
+      "Bash(./iperf3.exe -v)",
+      "Bash(python -m py_compile client.py server.py)",
+      "Bash(timeout 6 python client.py)",
+      "Bash(echo \"---exit $?---\")",
+      "Bash(python -m py_compile client.py)",
+      "Bash(python -c ' *)",
+      "Bash(timeout 6 ./iperf3.exe -c 192.168.11.134 -p 5202 -u -b 1M -t 3 -f m)"
+    ]
+  }
+}

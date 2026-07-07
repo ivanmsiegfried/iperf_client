@@ -1,0 +1,10 @@
+{
+    "server_ip": "192.168.11.114",
+    "streams": [
+        {"port": 5206, "bandwidth": "1M", "tos": 184, "time": 15, "title": "Voice_EF"},
+        {"port": 5202, "bandwidth": "1M", "tos": 136, "time": 15, "title": "Video_AF41"},
+        {"port": 5203, "bandwidth": "1M", "tos": 104, "time": 15, "title": "Stream_AF31"},
+        {"port": 5204, "bandwidth": "1M", "tos": 40,  "time": 15, "title": "Bulk_AF11"},
+        {"port": 5205, "bandwidth": "1M", "tos": 32,  "time": 15, "title": "Background_CS1"}
+    ]
+}
