@@ -118,19 +118,11 @@ def update_stats(title, transfer_mb, bw_mbps, lost, total, raw_line=""):
         st["total_lost"]   += lost
         st["total_dgrams"] += total
 
-        avg_bw    = st["sum_bw"] / st["count"]
-        loss_rate = (st["total_lost"] / st["total_dgrams"] * 100) \
-                    if st["total_dgrams"] > 0 else 0.0
-
+        # Baris summary dibangun di display_dashboard karena butuh proporsi
+        # bandwidth antar-stream (tidak bisa dihitung per-worker).
         stream_data[title]["latest"] = raw_line or (
             f"BW: {bw_mbps:.2f} Mbps | "
             f"Transfer: {transfer_mb:.3f} MB | Lost: {lost}/{total}"
-        )
-        stream_data[title]["summary"] = (
-            f"Avg: {avg_bw:.2f} Mbps | "
-            f"Total: {st['total_mb']:.2f} MB | "
-            f"Datagram Lost: {st['total_lost']}/{st['total_dgrams']} "
-            f"({loss_rate:.1f}%)"
         )
 
 
@@ -250,12 +242,34 @@ def display_dashboard(config):
                 latest = d.get("latest", "")
                 print(f"  {t:<{title_w}} {status_badge(status)}  {latest}")
 
+            # Proporsi bandwidth: rata-rata tiap stream + totalnya,
+            # supaya tiap stream tampil sebagai persentase dari total.
+            avgs = {}
+            for s in config["streams"]:
+                st = stream_data.get(s["title"], {}).get("stats", {})
+                c = st.get("count", 0)
+                avgs[s["title"]] = (st["sum_bw"] / c) if c else 0.0
+            grand_avg = sum(avgs.values())
+
             print(C.BOLD + "\n  SUMMARY AKUMULASI (DIHITUNG TIAP ITERASI)" + C.RESET)
             print(C.GRAY + "  " + "-" * (W - 2) + C.RESET)
             for s in config["streams"]:
-                t = s["title"]
-                d = stream_data.get(t, {})
-                print(f"  {C.BOLD}{t:<{title_w}}{C.RESET} {d.get('summary', 'N/A')}")
+                t  = s["title"]
+                st = stream_data.get(t, {}).get("stats", {})
+                if not st.get("count", 0):
+                    print(f"  {C.BOLD}{t:<{title_w}}{C.RESET} N/A")
+                    continue
+                avg       = avgs[t]
+                pct       = (avg / grand_avg * 100) if grand_avg else 0.0
+                loss_rate = (st["total_lost"] / st["total_dgrams"] * 100) \
+                            if st["total_dgrams"] > 0 else 0.0
+                summary = (
+                    f"Avg: {avg:.2f} Mbps ({pct:.1f}%/100%) | "
+                    f"Total: {st['total_mb']:.2f} MB | "
+                    f"Datagram Lost: {st['total_lost']}/{st['total_dgrams']} "
+                    f"({loss_rate:.1f}%)"
+                )
+                print(f"  {C.BOLD}{t:<{title_w}}{C.RESET} {summary}")
 
         print(C.CYAN + "\n" + "=" * W + C.RESET)
         print(C.GRAY + "  Tekan Ctrl+C untuk berhenti." + C.RESET)

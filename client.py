@@ -186,15 +186,10 @@ def run_iperf_client(server_ip, stream_config):
                     stats["sum_bitrate"] += bitrate
                     stats["sum_total_dgrams"] += total
 
-                    avg_bitrate = stats["sum_bitrate"] / stats["count"]
-
+                    # Baris summary dibangun di display_dashboard karena butuh
+                    # proporsi bandwidth antar-stream (tak bisa dihitung per-worker).
                     stream_data[title]["latest"] = (
                         f"Transfer: {transfer:7.2f} MB | Bitrate: {bitrate:8.2f} Mbps | Datagram: {total}"
-                    )
-                    stream_data[title]["summary"] = (
-                        f"Rata-rata: {avg_bitrate:.2f} Mbps | "
-                        f"Total Transfer: {stats['sum_transfer']:.2f} MB | "
-                        f"Datagram Sent: {stats['sum_total_dgrams']}"
                     )
                 else:
                     stream_data[title]["latest"] = line
@@ -238,12 +233,30 @@ def display_dashboard(config):
             if status == "Running" or status == "Starting":
                 all_finished = False
 
+        # Proporsi bandwidth: hitung rata-rata tiap stream lalu totalnya,
+        # supaya tiap stream bisa ditampilkan sebagai persentase dari total.
+        avgs = {}
+        for stream in config['streams']:
+            st = stream_data.get(stream['title'], {}).get('stats', {})
+            c = st.get('count', 0)
+            avgs[stream['title']] = (st['sum_bitrate'] / c) if c else 0.0
+        grand_avg = sum(avgs.values())
+
         print(C.BOLD + "\n  RINGKASAN (RATA-RATA, TOTAL TRANSFER & DATAGRAM)" + C.RESET)
         print(C.GRAY + "  " + "-" * (W - 2) + C.RESET)
         for stream in config['streams']:
             title = stream['title']
-            data = stream_data.get(title, {})
-            summary = data.get("summary", "Menunggu pengujian selesai...")
+            st = stream_data.get(title, {}).get('stats', {})
+            if not st.get('count', 0):
+                print(f"  {C.BOLD}{title:<{title_w}}{C.RESET} Menunggu pengujian selesai...")
+                continue
+            avg = avgs[title]
+            pct = (avg / grand_avg * 100) if grand_avg else 0.0
+            summary = (
+                f"Rata-rata: {avg:.2f} Mbps ({pct:.1f}%/100%) | "
+                f"Total Transfer: {st['sum_transfer']:.2f} MB | "
+                f"Datagram Sent: {st['sum_total_dgrams']}"
+            )
             print(f"  {C.BOLD}{title:<{title_w}}{C.RESET} {summary}")
 
         print(C.CYAN + "\n" + "=" * W + C.RESET)
