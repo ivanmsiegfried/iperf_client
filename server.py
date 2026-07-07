@@ -62,7 +62,8 @@ def is_interval_line(line):
     if not m:
         return False
     duration = float(m.group(2)) - float(m.group(1))
-    return duration <= 1.5   # iterasi ~1 detik
+    # 0 < durasi <= 1.5: buang baris ekor durasi-nol (mis. "4.01-4.01 sec")
+    return 0 < duration <= 1.5   # iterasi ~1 detik
 
 
 def parse_text_line(line):
@@ -78,10 +79,14 @@ def parse_text_line(line):
         transfer_mb = float(tm.group(1)) / 1024 if tm.group(2).upper() == 'K' \
                       else float(tm.group(1))
 
-        bm = re.search(r'([\d.]+)\s+Mbits/sec', line)
+        # Terima Mbits/sec (normal, karena -f m) maupun Kbits/sec sebagai
+        # jaring pengaman; keduanya dikonversi ke Mbps supaya konsisten.
+        bm = re.search(r'([\d.]+)\s+(M|K)bits/sec', line)
         if not bm:
             return None
         bw_mbps = float(bm.group(1))
+        if bm.group(2) == 'K':
+            bw_mbps /= 1024
 
         dm = re.search(r'(\d+)/(\d+)\s*\(', line)
         lost  = int(dm.group(1)) if dm else 0
@@ -171,7 +176,10 @@ def run_iperf_server(stream_config):
                     "total_lost":0,"total_dgrams":0},
     }
 
-    cmd = ["iperf3", "-s", "-p", str(port), "-i", "1"]
+    # "-f m" WAJIB: memaksa Bandwidth selalu Mbits/sec, sama seperti client.
+    # Tanpa ini, interval di bawah 1 Mbps dicetak "Kbits/sec" dan gagal
+    # di-parse -> interval terbuang -> total server jauh lebih kecil dari client.
+    cmd = ["iperf3", "-s", "-p", str(port), "-i", "1", "-f", "m"]
     creation_flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
 
     try:

@@ -2,7 +2,7 @@
     "streams": [
         {"port": 5206, "title": "Voice_EF"},
         {"port": 5202, "title": "Video_AF41"},
-        {"port": 5203, "title": "Streaming_AF31"},
+        {"port": 5203, "title": "Stream_AF31"},
         {"port": 5204, "title": "Bulk_AF11"},
         {"port": 5205, "title": "Background_CS1"}
     ]
